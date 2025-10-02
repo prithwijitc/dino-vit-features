@@ -9,7 +9,11 @@ import numpy as np
 from PIL import Image
 from sklearn.decomposition import PCA
 from typing import List, Tuple
-
+from pathlib import Path
+from typing import List
+import numpy as np
+import matplotlib.pyplot as plt
+from PIL import Image
 
 def pca(image_paths, load_size: int = 224, layer: int = 11, facet: str = 'key', bin: bool = False, stride: int = 4,
         model_type: str = 'dino_vits8', n_components: int = 4,
@@ -101,6 +105,101 @@ def plot_pca(pil_image: Image.Image, pca_image: numpy.ndarray, save_dir: str, la
         if save_resized:
             pca_pil = pca_pil.resize(pil_image.size, resample=PIL.Image.NEAREST)
         pca_pil.save(comp_file_path)
+
+
+
+
+# def plot_pca(
+#     pil_image: Image.Image,
+#     pca_image: np.ndarray,            # H x W x n_components
+#     save_dir: str,
+#     last_components_rgb: bool = True,
+#     save_resized: bool = True,
+#     save_prefix: str = '',
+#     dpi: int = 150,
+#     cmap: str = 'viridis'             # change if you prefer another colormap
+# ):
+#     """
+#     Save PCA component visualizations with colorbars.
+
+#     - Saves the original image.
+#     - For each component k, saves a PNG with imshow + colorbar (values reflect the component's raw scale).
+#     - Optionally saves an RGB composed of the last three components (no colorbar).
+
+#     Notes:
+#     * If `save_resized=True`, components are upsampled to the original image size before plotting.
+#       Colorbar tick values still reflect the raw (pre-normalization) component scale.
+#     * If a component is constant (max == min), it is rendered as a flat image with a degenerate colorbar.
+#     """
+#     H, W, n_components = pca_image.shape
+#     save_dir = Path(save_dir)
+#     save_dir.mkdir(exist_ok=True, parents=True)
+
+#     # 1) Save original image
+#     pil_image_path = save_dir / f'{save_prefix}_orig_img.png'
+#     pil_image.save(pil_image_path)
+
+#     target_w, target_h = pil_image.size
+
+#     # 2) Per-component plots with colorbars
+#     for comp_idx in range(n_components):
+#         comp = pca_image[:, :, comp_idx].astype(np.float32)
+
+#         # Raw min/max for colorbar
+#         comp_min = float(np.nanmin(comp))
+#         comp_max = float(np.nanmax(comp))
+
+#         # Handle constant components to avoid division-by-zero later
+#         if comp_max == comp_min:
+#             comp_resized = np.full((H, W), comp_min, dtype=np.float32)
+#         else:
+#             comp_resized = comp.copy()
+
+#         # Resize to original size if requested (use normalized route for high-quality resizing)
+#         if save_resized and (W != target_w or H != target_h):
+#             # Normalize to [0,1] for PIL resize
+#             if comp_max == comp_min:
+#                 comp_norm = np.zeros_like(comp_resized, dtype=np.float32)
+#             else:
+#                 comp_norm = (comp_resized - comp_min) / (comp_max - comp_min)
+#             comp_img_uint8 = (comp_norm * 255.0).clip(0, 255).astype(np.uint8)
+#             comp_img_pil = Image.fromarray(comp_img_uint8, mode='L').resize((target_w, target_h), resample=Image.NEAREST)
+#             # Back to float in the original value range so colorbar shows raw units
+#             comp_resized = np.asarray(comp_img_pil, dtype=np.float32) / 255.0
+#             comp_resized = comp_min + comp_resized * (comp_max - comp_min)
+
+#         # Build and save figure with colorbar
+#         comp_file_path = save_dir / f'{save_prefix}_{comp_idx}.png'
+#         fig, ax = plt.subplots(figsize=(max(2, target_w/100), max(2, target_h/100)), dpi=dpi)
+#         im = ax.imshow(comp_resized, cmap=cmap, aspect='equal')
+#         ax.set_title(f'PCA Component {comp_idx}')
+#         ax.set_xticks([]); ax.set_yticks([])
+#         cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+#         cbar.set_label('Component value', rotation=90)
+#         plt.tight_layout()
+#         fig.savefig(comp_file_path, bbox_inches='tight')
+#         plt.close(fig)
+
+#     # 3) Optional: last 3 components as RGB (no colorbar)
+#     if last_components_rgb and n_components >= 3:
+#         comp_idxs = f"{n_components-3}_{n_components-2}_{n_components-1}"
+#         comp = pca_image[:, :, -3:].astype(np.float32)
+
+#         # Per-channel min/max normalization to [0,1] for display
+#         cmins = comp.reshape(-1, 3).min(axis=0)
+#         cmaxs = comp.reshape(-1, 3).max(axis=0)
+#         # Avoid divide-by-zero
+#         scale = np.where(cmaxs > cmins, (cmaxs - cmins), 1.0).astype(np.float32)
+#         comp_img = (comp - cmins) / scale
+#         comp_img = np.clip(comp_img, 0.0, 1.0)
+
+#         rgb = (comp_img * 255.0).astype(np.uint8)
+#         rgb_pil = Image.fromarray(rgb, mode='RGB')
+#         if save_resized and (rgb_pil.size != pil_image.size):
+#             rgb_pil = rgb_pil.resize(pil_image.size, resample=Image.NEAREST)
+
+#         comp_file_path = save_dir / f'{save_prefix}_{comp_idxs}_rgb.png'
+#         rgb_pil.save(comp_file_path)
 
 
 """ taken from https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse"""
